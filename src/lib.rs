@@ -5,7 +5,7 @@ use std::{
     hash::Hash,
     marker::PhantomData,
     mem::ManuallyDrop,
-    ops::Deref,
+    ops::{Deref, DerefMut},
     ptr::{self, addr_of_mut, NonNull},
     sync::atomic::{fence, AtomicUsize, Ordering},
 };
@@ -183,6 +183,12 @@ impl<T: ?Sized, M> FlexRc<T, M> {
         unsafe { self.ptr.as_ref() }
     }
 
+    fn inner_mut(&mut self) -> &mut FlexRcBox<T> {
+        // SAFETY: The pointer is valid as long as the FlexRc is alive. If we have an &mut, aliasing rules
+        // are upheld as this should only come from a FlexRc which is single-threaded.
+        unsafe { self.ptr.as_mut() }
+    }
+
     unsafe fn drop_slow(&mut self) {
         ptr::drop_in_place(addr_of_mut!((*self.ptr.as_ptr()).data));
 
@@ -232,6 +238,12 @@ impl<T: ?Sized, M> Deref for FlexRc<T, M> {
 
     fn deref(&self) -> &Self::Target {
         &self.inner().data
+    }
+}
+
+impl<T: ?Sized> DerefMut for FlexRc<T, FlexRcSimple> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner_mut().data
     }
 }
 
