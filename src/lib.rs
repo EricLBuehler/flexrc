@@ -105,6 +105,9 @@ impl<T: Send + Default> FlexRcImplSendDefault<T> for FlexRc<T, FlexRcSend> {
     }
 }
 
+unsafe impl<T: ?Sized> Send for FlexRc<T, FlexRcSend> {}
+unsafe impl<T: ?Sized> Sync for FlexRc<T, FlexRcSend> {}
+
 impl<T> FlexRcImpl<T> for FlexRc<T, FlexRcSimple> {
     /// Create a new, unsync, `FlexRc`.
     fn new(data: T) -> Self {
@@ -170,6 +173,9 @@ impl<T: Default> FlexRcImplImmortalDefault<T> for FlexRc<T, FlexRcImmortal> {
         <FlexRc<_, _> as FlexRcImplImmortal<_>>::new(Default::default())
     }
 }
+
+unsafe impl<T: ?Sized> Send for FlexRc<T, FlexRcImmortal> {}
+unsafe impl<T: ?Sized> Sync for FlexRc<T, FlexRcImmortal> {}
 
 impl<T: ?Sized, M> FlexRc<T, M> {
     fn inner(&self) -> &FlexRcBox<T> {
