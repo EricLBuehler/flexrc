@@ -59,6 +59,7 @@ pub trait FlexRcImplImmortalMake<T: ?Sized + Clone>: FlexRcImplImmortal<T> {
 pub trait FlexRcImplSend<T: ?Sized> {
     fn new(data: T) -> Self;
     fn clone(&self) -> Self;
+    fn atomic_count(&self) -> usize;
 }
 
 pub trait FlexRcImplSendDefault<T: ?Sized + Default>: FlexRcImplSend<T> {
@@ -73,6 +74,7 @@ pub trait FlexRcImplSendMake<T: ?Sized + Clone>: FlexRcImplSend<T> {
 pub trait FlexRcImpl<T: ?Sized> {
     fn new(data: T) -> Self;
     fn clone(&self) -> Self;
+    fn ref_count(&self) -> usize;
 }
 
 pub trait FlexRcImplMake<T: ?Sized + Clone>: FlexRcImpl<T> {
@@ -111,6 +113,12 @@ impl<T> FlexRcImplSend<T> for FlexRc<T, FlexRcSend> {
             ptr: self.ptr,
             _marker: self._marker,
         }
+    }
+
+    fn atomic_count(&self) -> usize {
+        // SAFETY: we know have this specific field, we are in this impl.
+        let refcount = unsafe { &self.inner().refcount.atomic };
+        refcount.load(Ordering::Relaxed)
     }
 }
 
@@ -186,6 +194,12 @@ impl<T> FlexRcImpl<T> for FlexRc<T, FlexRcSimple> {
             ptr: self.ptr,
             _marker: self._marker,
         }
+    }
+
+    fn ref_count(&self) -> usize {
+        // SAFETY: we know have this specific field, we are in this impl.
+        let refcount = unsafe { &self.inner().refcount.simple };
+        refcount.get()
     }
 }
 
