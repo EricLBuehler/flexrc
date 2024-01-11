@@ -323,7 +323,7 @@ impl<T: ?Sized, M> Drop for FlexRc<T, M> {
             Discriminant::Send => {
                 // SAFETY: we know have this specific field, we have the discriminant.
                 let refcount = unsafe { &self.inner().refcount.atomic };
-                // SOUNDNESS: new references may only be formed from an existing reference.
+                // SOUNDNESS: need to ensure that all previous writes have been written.
                 if refcount.fetch_sub(1, Ordering::Release) != 1 {
                     return;
                 }
