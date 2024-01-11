@@ -2,7 +2,7 @@
 
 use std::thread;
 
-use crate::{FlexRc, FlexRcImpl, FlexRcImplSend};
+use crate::{FlexRc, FlexRcImpl, FlexRcImplSend, FlexRcImplSendMakeSimple};
 
 #[test]
 fn unsync_box() {
@@ -11,7 +11,7 @@ fn unsync_box() {
 }
 
 #[test]
-fn sync_box() {
+fn send_box() {
     let flex = <FlexRc<_, _> as FlexRcImplSend<_>>::new(Box::new(5));
 
     let other = flex.clone();
@@ -19,6 +19,29 @@ fn sync_box() {
         let _cloned = other.clone();
     });
 }
+
+#[test]
+fn send_make_simple() {
+    let immortal = <FlexRc<_, _> as FlexRcImplSend<_>>::new(0);
+    let normal = immortal.make_simple();
+    assert_eq!(*normal, 0);
+
+    let _thread = thread::spawn(move || {
+        let normal = immortal.make_simple();
+        assert_eq!(*normal, 0);
+    });
+}
+
+/*
+#[test]
+fn immortal_make_simple() {
+    use crate::FlexRcImplImmortal;
+
+    let immortal = <FlexRc<_, _> as FlexRcImplImmortal<_>>::new(0);
+    let normal = immortal.make_simple();
+    assert_eq!(*normal, 0);
+}
+*/
 
 /*
 #[test]

@@ -4,9 +4,9 @@ use std::{
     fmt::{Debug, Display},
     hash::Hash,
     marker::PhantomData,
-    mem::ManuallyDrop,
+    mem::{ManuallyDrop, MaybeUninit},
     ops::{Deref, DerefMut},
-    ptr::{self, addr_of_mut, NonNull},
+    ptr::{self, addr_of, addr_of_mut, NonNull},
     sync::atomic::{fence, AtomicUsize, Ordering},
 };
 
@@ -51,6 +51,10 @@ pub trait FlexRcImplImmortalDefault<T: ?Sized + Default>: FlexRcImplImmortal<T> 
     fn default() -> Self;
 }
 
+pub trait FlexRcImplImmortalMakeSimple<T: ?Sized + Clone>: FlexRcImplImmortal<T> {
+    fn make_simple(&self) -> FlexRc<T, FlexRcSimple>;
+}
+
 pub trait FlexRcImplSend<T: ?Sized + Send> {
     fn new(data: T) -> Self;
     fn clone(&self) -> Self;
@@ -58,6 +62,10 @@ pub trait FlexRcImplSend<T: ?Sized + Send> {
 
 pub trait FlexRcImplSendDefault<T: ?Sized + Send + Default>: FlexRcImplSend<T> {
     fn default() -> Self;
+}
+
+pub trait FlexRcImplSendMakeSimple<T: ?Sized + Send + Clone>: FlexRcImplSend<T> {
+    fn make_simple(&self) -> FlexRc<T, FlexRcSimple>;
 }
 
 pub trait FlexRcImpl<T: ?Sized> {
@@ -102,6 +110,25 @@ impl<T: Send> FlexRcImplSend<T> for FlexRc<T, FlexRcSend> {
 impl<T: Send + Default> FlexRcImplSendDefault<T> for FlexRc<T, FlexRcSend> {
     fn default() -> Self {
         <FlexRc<_, _> as FlexRcImplSend<_>>::new(Default::default())
+    }
+}
+
+impl<T: Send + Clone> FlexRcImplSendMakeSimple<T> for FlexRc<T, FlexRcSend> {
+    /// If we are the only reference do not clone the data. Otherwise, clone the data to create a FlexRc with FlexRcSimple.
+    fn make_simple(&self) -> FlexRc<T, FlexRcSimple> {
+        // SAFETY: we know have this specific field, we are in this impl.
+        if unsafe { &self.inner().refcount.atomic }.load(Ordering::Relaxed) == 1 {
+            let mut data = MaybeUninit::uninit();
+            let src = addr_of!(self.inner().data);
+            let dst = addr_of_mut!(data) as *mut T;
+            // SAFETY: MaybeUninit is repr(transparent), so this is OK.
+            unsafe { ptr::copy_nonoverlapping(src, dst, 1) };
+            // SAFETY: This is guaranteed to be initialized.
+            <FlexRc<_, _> as FlexRcImpl<_>>::new(unsafe { data.assume_init() })
+        } else {
+            let data = (**self).clone();
+            <FlexRc<_, _> as FlexRcImpl<_>>::new(data)
+        }
     }
 }
 
@@ -171,6 +198,15 @@ impl<T> FlexRcImplImmortal<T> for FlexRc<T, FlexRcImmortal> {
 impl<T: Default> FlexRcImplImmortalDefault<T> for FlexRc<T, FlexRcImmortal> {
     fn default() -> Self {
         <FlexRc<_, _> as FlexRcImplImmortal<_>>::new(Default::default())
+    }
+}
+
+impl<T: Clone> FlexRcImplImmortalMakeSimple<T> for FlexRc<T, FlexRcImmortal> {
+    /// If we are the only reference do not clone the data. Otherwise, clone the data to create a FlexRc with FlexRcSimple.
+    fn make_simple(&self) -> FlexRc<T, FlexRcSimple> {
+        // SAFETY: we know have this specific field, we are in this impl.
+        let data = (**self).clone();
+        <FlexRc<_, _> as FlexRcImpl<_>>::new(data)
     }
 }
 
