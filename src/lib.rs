@@ -132,7 +132,7 @@ impl<T: Clone> FlexRcImplSendMake<T> for FlexRc<T, FlexRcSend> {
     /// If we are the only reference do not clone the data. Otherwise, clone the data to create a FlexRc with FlexRcSimple.
     fn make_simple(&self) -> FlexRc<T, FlexRcSimple> {
         // SAFETY: we know have this specific field, we are in this impl.
-        if unsafe { &self.inner().refcount.atomic }.load(Ordering::Relaxed) == 1 {
+        if unsafe { &self.inner().refcount.atomic }.load(Ordering::Acquire) == 1 {
             let mut data = MaybeUninit::uninit();
             let src = addr_of!(self.inner().data);
             let dst = addr_of_mut!(data) as *mut T;
@@ -149,7 +149,7 @@ impl<T: Clone> FlexRcImplSendMake<T> for FlexRc<T, FlexRcSend> {
     /// If we are the only reference do not clone the data. Otherwise, clone the data to create a FlexRc with FlexRcImmortal.
     fn make_immortal(&self) -> FlexRc<T, FlexRcImmortal> {
         // SAFETY: we know have this specific field, we are in this impl.
-        if unsafe { &self.inner().refcount.atomic }.load(Ordering::Relaxed) == 1 {
+        if unsafe { &self.inner().refcount.atomic }.load(Ordering::Acquire) == 1 {
             let mut data = MaybeUninit::uninit();
             let src = addr_of!(self.inner().data);
             let dst = addr_of_mut!(data) as *mut T;
@@ -207,7 +207,7 @@ impl<T: Clone> FlexRcImplMake<T> for FlexRc<T, FlexRcSimple> {
     /// If we are the only reference do not clone the data. Otherwise, clone the data to create a FlexRc with FlexRcSend.
     fn make_send(&self) -> FlexRc<T, FlexRcSend> {
         // SAFETY: we know have this specific field, we are in this impl.
-        if unsafe { &self.inner().refcount.atomic }.load(Ordering::Relaxed) == 1 {
+        if unsafe { &self.inner().refcount.atomic }.load(Ordering::Acquire) == 1 {
             let mut data = MaybeUninit::uninit();
             let src = addr_of!(self.inner().data);
             let dst = addr_of_mut!(data) as *mut T;
@@ -224,7 +224,7 @@ impl<T: Clone> FlexRcImplMake<T> for FlexRc<T, FlexRcSimple> {
     /// If we are the only reference do not clone the data. Otherwise, clone the data to create a FlexRc with FlexRcImmortal.
     fn make_immortal(&self) -> FlexRc<T, FlexRcImmortal> {
         // SAFETY: we know have this specific field, we are in this impl.
-        if unsafe { &self.inner().refcount.atomic }.load(Ordering::Relaxed) == 1 {
+        if unsafe { &self.inner().refcount.atomic }.load(Ordering::Acquire) == 1 {
             let mut data = MaybeUninit::uninit();
             let src = addr_of!(self.inner().data);
             let dst = addr_of_mut!(data) as *mut T;
