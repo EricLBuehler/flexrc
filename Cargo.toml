@@ -2,7 +2,11 @@
 name = "flexrc"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Fast, flexible, and safe reference counted type."
+homepage = "https://github.com/EricLBuehler/flexrc"
+repository = "https://github.com/EricLBuehler/flexrc"
+keywords = ["reference-counted", "thread-safe", "smart-pointer", "memory"]
+categories = ["memory-management", "data-structures", "concurrency"]
+license = "MIT"
 
 [dependencies]
